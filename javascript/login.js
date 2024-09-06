@@ -112,11 +112,16 @@ function showUserName() {
         un.innerText = current_user.username;
     }
 }
-function addStudent(studentName) {
+function addStudent(studentName, score) {
     let currentUser = loadCurrentUser();
     console.log('Current User:', currentUser);
-    if (!currentUser.students.includes(studentName)) {
-        currentUser.students.push(studentName);
+
+    if (!currentUser || !Array.isArray(currentUser.students)) {
+        currentUser.students = [];
+    }
+
+    if (!currentUser.students.some(student => student.name === studentName)) {
+        currentUser.students.push({ name: studentName, score: score });
         saveCurrentUser(currentUser);
         console.log('Added Student:', studentName);
         return true;
@@ -127,68 +132,145 @@ function addStudent(studentName) {
 
 function showStudentsList() {
     let currentUser = loadCurrentUser();
-    console.log('Current User:', currentUser);
-    let studentsList = document.getElementById('studentsList');
-    studentsList.innerHTML = '';
+    let studentsBody = document.getElementById('studentsBody');
+    studentsBody.innerHTML = '';
+
+    if (currentUser && Array.isArray(currentUser.students)) {
         currentUser.students.forEach(student => {
-            const li = document.createElement('li');
-            li.textContent = student;
-            studentsList.appendChild(li);
+            const tr = document.createElement('tr');
+            const tdName = document.createElement('td');
+            const tdScore = document.createElement('td');
+            const tdActions = document.createElement('td');
+
+            tdName.textContent = student.name;
+            tdScore.textContent = student.score;
+
+            const deleteButton = document.createElement('button');
+            deleteButton.className = 'delete';
+            deleteButton.textContent = 'delete';
+            deleteButton.addEventListener('click', function() {
+                deleteStudent(student.name);
+                showStudentsList();
+            });
+            const scoreSelect = document.createElement('select');
+            scoreSelect.className = 'score-select';
+            scoreSelect.innerHTML = `
+                <option value="add">add</option>
+                <option value="subtract">deduct</option>
+            `;
+            scoreSelect.addEventListener('change', function() {
+                const action = this.value;
+                const inputScore = tr.querySelector('.score-input');
+                const reasonInput = tr.querySelector('.reason-input');
+                if (action === 'add' || action === 'subtract') {
+                    inputScore.disabled = false;
+                    reasonInput.disabled = false;
+                    inputScore.style.display = 'inline-block';
+                    reasonInput.style.display = 'inline-block';
+                } else {
+                    inputScore.disabled = true;
+                    reasonInput.disabled = true;
+                    inputScore.style.display = 'none';
+                    reasonInput.style.display = 'none';
+                }
+            });
+            const inputScore = document.createElement('input');
+            inputScore.type = 'number';
+            inputScore.placeholder = 'points';
+            inputScore.className = 'score-input';
+            const reasonInput = document.createElement('input');
+            reasonInput.type = 'text';
+            reasonInput.placeholder = 'reason';
+            reasonInput.className = 'reason-input';
+            const submitButton = document.createElement('button');
+            submitButton.textContent = 'submit';
+            submitButton.addEventListener('click', function() {
+                const action = scoreSelect.value;
+                const delta = parseInt(inputScore.value);
+                const reason = reasonInput.value;
+                if (isNaN(delta)) {
+                    alert('Please input valid number!');
+                    location.reload();
+                    return;
+                }
+                modifyScore(student.name, action === 'add' ? delta : -delta, reason);
+                alert('Success！');
+                location.reload();
+            });
+            const historyButton = document.createElement('button');
+            historyButton.textContent = 'show history';
+            historyButton.addEventListener('click', function() {
+                showHistory(student.name, student.history);
+            });
+
+            tdActions.appendChild(deleteButton);
+            tdActions.appendChild(scoreSelect);
+            tdActions.appendChild(inputScore);
+            tdActions.appendChild(reasonInput);
+            tdActions.appendChild(submitButton);
+            tdActions.appendChild(historyButton);
+
+            tr.appendChild(tdName);
+            tr.appendChild(tdScore);
+            tr.appendChild(tdActions);
+            studentsBody.appendChild(tr);
         });
+    }
 }
 
-// function showGreeting() {
-//     if (localStorage.current_user != null) {
-//         let time = new Date().format("yyyy.MM.dd");
-//         let greet;
-//         let h = new Date().getHours();
-//         if (h <= 4 || h == 23) {
-//             greet = "Have a good dream";
-//         }
-//         else if (h >= 5 && h <= 9) {
-//             greet = "Good morning";
-//         }
-//         else if (h == 12) {
-//             greet = "Good noon";
-//         }
-//         else if (h == 10 || h == 11 || (h >= 13 && h <= 17)) {
-//             greet = "Good good study, day day up";
-//         }
-//         else if (h >= 18 && h <= 20) {
-//             greet = "Good evening";
-//         }
-//         else if (h == 21 || h == 22) {
-//             greet = "Good night";
-//         }
-//         greeting.innerText = "Today is " + time + ". " + greet + ".";
-//         wel.style.display = "block";
-//     }
-//     else {
-//         wel.style.display = "none";
-//     }
-// }
+function deleteStudent(studentName) {
+    let currentUser = loadCurrentUser();
+    currentUser.students = currentUser.students.filter(student => student.name !== studentName);
+    saveCurrentUser(currentUser);
+    console.log('Deleted Student:', studentName);
+}
 
-// Date.prototype.format = function (fmt) {
-//     var o = {
-//         "M+": this.getMonth() + 1,
-//         "d+": this.getDate(),
-//         "h+": this.getHours(),
-//         "m+": this.getMinutes(),
-//         "s+": this.getSeconds(),
-//         "q+": Math.floor((this.getMonth() + 3) / 3),
-//         "S": this.getMilliseconds()
-//     };
+function modifyScore(studentName, delta, reason) {
+    let currentUser = loadCurrentUser();
+    const student = currentUser.students.find(student => student.name === studentName);
+    if (student) {
+        student.score += delta;
+        if (!Array.isArray(student.history)) {
+            student.history = []; 
+        }
+        student.history.push({ delta: delta, reason: reason, timestamp: new Date().toLocaleString() });
+        saveCurrentUser(currentUser);
+        console.log('Modified Score:', student.score);
+        updateScoreDisplay(studentName, student.score); 
+    }
+}
 
-//     if (/(y+)/.test(fmt)) {
-//         fmt = fmt.replace(RegExp.$1, (this.getFullYear() + "").substr(4 - RegExp.$1.length));
-//     }
+function updateScoreDisplay(studentName, newScore) {
+    const row = document.querySelector(`[data-student-name="${studentName}"]`);
+    if (row) {
+        row.querySelector('.score').textContent = newScore;
+    }
+}
 
-//     for (var k in o) {
-//         if (new RegExp("(" + k + ")").test(fmt)) {
-//             fmt = fmt.replace(
-//                 RegExp.$1, (RegExp.$1.length == 1) ? (o[k]) : (("00" + o[k]).substr(("" + o[k]).length)));
-//         }
-//     }
+function showScoreMenu(studentName, score, tr) 
+{
+    const dropdownMenu = document.querySelector(`.dropdown-menu[data-student-name="${studentName}"]`);
+    dropdownMenu.style.display = 'block';
 
-//     return fmt;
-// }
+    function hideMenu() {
+        dropdownMenu.style.display = 'none';
+    }
+    window.addEventListener('click', function(event) {
+        if (!dropdownMenu.contains(event.target)) {
+            hideMenu();
+        }
+    });
+    document.querySelectorAll('.dropdown-content a').forEach(link => {
+        link.addEventListener('click', function() {
+            hideMenu();
+        });
+    });
+}
+
+function showHistory(studentName, history) {
+    if (Array.isArray(history)) {
+        alert(`${studentName}'s history:\n${history.map(item => `${item.timestamp}: ${item.delta} points (Reason: ${item.reason})`).join('\n')}`);
+    } else {
+        alert(`${studentName} 's history not found.`);
+    }
+}
