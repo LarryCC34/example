@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>Students Management System</title>
+    <style>
+        body { font-family: Arial, sans-serif; }
+        .hidden { display: none; }
+    </style>
+</head>
+<script src="../javascript/login.js"></script>
+<body>
+    <div id="welcome">
+        <h1>Welcome, <span id="un"></span>!</h1>
+        <p id="greeting"></p>
+        <button onclick="quit()">Logout</button>
+    </div>
+
+    <div id="teacherView">
+        <h1>Teacher View</h1>
+        <p>This is the page to add students into the system.</p>
+        <ul id="studentsList"></ul>
+        <h2>Add students</h2>
+        <form id="addStudentForm">
+            <label for="newStudentName">Student name:</label>
+            <input type="text" id="newStudentName" name="newStudentName" required>
+            <button type="submit">Add student</button>
+        </form>
+    </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() 
+        {
+            showUserName();
+
+            const addStudentForm = document.getElementById('addStudentForm');
+            if (!addStudentForm) {
+                console.error('Element with ID "addStudentForm" not found.');
+                return;
+            }
+
+            addStudentForm.addEventListener('submit', function(event) {
+                event.preventDefault();
+                const newStudentName = document.getElementById('newStudentName').value;
+                console.log('New Student Name:', newStudentName);
+                const added = addStudent(newStudentName);
+                if (added) {
+                    console.log('Student Added Successfully');
+                    showStudentsList();
+                    document.getElementById('newStudentName').value = '';
+                } else {
+                    console.log('Student Already Exists');
+                    alert('The student already exists!');
+                }
+            });
+            showStudentsList(); 
+        });
+    </script>
+   
+</body>
+</html>
